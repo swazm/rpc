@@ -25,14 +25,14 @@ func (c *CalculatorService) Add(request *http.Request, data *CalculatorRequest) 
 }
 
 func TestShouldRegisterCalculator(t *testing.T) {
-	err:=DefaultServer.Register(new(CalculatorService),"pipi")
+	err:=DefaultServer.Register(new(CalculatorService))
 	if err != nil {
 		t.Errorf("test should have registered methods instead %s",err.Error())
 	}
 }
 
 func TestShouldGetDebugOutput(t *testing.T)  {
-	err:=DefaultServer.Register(new(CalculatorService),"pipi")
+	err:=DefaultServer.Register(new(CalculatorService))
 	if err != nil {
 		t.Errorf("test should have registered methods instead %s",err.Error())
 	}

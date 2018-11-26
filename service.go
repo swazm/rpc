@@ -45,7 +45,7 @@ func suitableMethods(typ reflect.Type) map[string]*methodType {
 		// First arg needs be a pointer to a context
 		requestType := mtype.In(1)
 		if requestType.Kind() != reflect.Ptr || requestType.Elem() != typeOfContext {
-			log.Printf("rpc.Register: first argument of methods %q needs to be %q not: %q\n", mname, requestType.Elem(), requestType)
+			log.Printf("rpc.Register: first argument of methods %q needs to be %q not: %q\n", mname,typeOfContext, requestType.Elem())
 			continue
 		}
 		// Second arg must be a pointer.

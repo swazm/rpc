@@ -95,7 +95,7 @@ func (server *Server) HandleFunc(rw http.ResponseWriter, req *http.Request) {
 
 			err := json.Unmarshal([]byte(request.Data), requestData.Interface());
 			if err != nil {
-				response.Error = NewError(http.StatusInternalServerError, fmt.Sprintf("error while calling '%s' on service :'%s'", request.Method, request.Service, err.Error()))
+				response.Error = NewError(http.StatusInternalServerError, fmt.Sprintf("error while calling '%s' on service '%s': %s", request.Method, request.Service, err.Error()))
 				status = http.StatusInternalServerError
 			} else {
 
