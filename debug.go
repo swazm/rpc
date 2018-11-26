@@ -1,13 +1,9 @@
 package rpc
 
-/*
-	Some HTML presented at http://machine:port/debug/rpc
-	Lists services, their methods, and some statistics, still rudimentary.
-*/
-
 import (
 	"fmt"
 	"html/template"
+	"io"
 	"net/http"
 	"sort"
 )
@@ -20,11 +16,10 @@ const debugText = `<html>
 	Service {{.Name}}
 	<hr>
 		<table>
-		<th align=center>Method</th><th align=center>Calls</th>
+		<th align=center>Method</th>
 		{{range .Method}}
 			<tr>
-			<td align=left font=fixed>{{.Name}}({{.Type.ArgType}}, {{.Type.ReplyType}}) error</td>
-			<td align=center>{{.Type.NumCalls}}</td>
+			<td align=left font=fixed>{{.Name}}(*http.Request, {{.Type.RequestDataType}},) ({{.Type.ResponseDataType}} error)</td>
 			</tr>
 		{{end}}
 		</table>
@@ -33,9 +28,6 @@ const debugText = `<html>
 	</html>`
 
 var debug = template.Must(template.New("RPC debug").Parse(debugText))
-
-// If set, print log statements for internal and I/O errors.
-var debugLog = false
 
 type debugMethod struct {
 	Type *methodType
@@ -60,27 +52,26 @@ func (m methodArray) Len() int           { return len(m) }
 func (m methodArray) Less(i, j int) bool { return m[i].Name < m[j].Name }
 func (m methodArray) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
 
-type debugHTTP struct {
-	*Server
+// Runs at /debug/rpc
+func (server *Server) DebugHandlerFunc(w http.ResponseWriter, req *http.Request) {
+	err := server.writeDebug(w)
+	if err != nil {
+		fmt.Fprintln(w, "rpc: error executing template:", err.Error())
+	}
 }
 
-// Runs at /debug/rpc
-func (server debugHTTP) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (server *Server) writeDebug(w io.Writer) error {
 	// Build a sorted version of the data.
 	var services serviceArray
-	server.serviceMap.Range(func(snamei, svci interface{}) bool {
-		svc := svci.(*service)
-		ds := debugService{svc, snamei.(string), make(methodArray, 0, len(svc.method))}
-		for mname, method := range svc.method {
+	for snamei, svci := range server.services {
+		svc := svci
+		ds := debugService{svc, snamei, make(methodArray, 0, len(svc.methods))}
+		for mname, method := range svc.methods {
 			ds.Method = append(ds.Method, debugMethod{method, mname})
 		}
 		sort.Sort(ds.Method)
 		services = append(services, ds)
-		return true
-	})
-	sort.Sort(services)
-	err := debug.Execute(w, services)
-	if err != nil {
-		fmt.Fprintln(w, "rpc: error executing template:", err.Error())
 	}
+	sort.Sort(services)
+	return debug.Execute(w, services)
 }
