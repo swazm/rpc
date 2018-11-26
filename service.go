@@ -1,9 +1,7 @@
 package rpc
 
 import (
-	"fmt"
 	"log"
-	"net/http"
 	"reflect"
 	"unicode"
 	"unicode/utf8"
@@ -12,10 +10,11 @@ import (
 type Service int
 
 type service struct {
-	name    string                 // name of service
-	rcvr    reflect.Value          // receiver of methods for the service
-	typ     reflect.Type           // type of the receiver
-	methods map[string]*methodType // registered methods
+	name       string                 // name of service
+	rcvr       reflect.Value          // receiver of methods for the service
+	typ        reflect.Type           // type of the receiver
+	methods    map[string]*methodType // registered methods
+	middleware []func(c *Context) error
 }
 
 type methodType struct {
@@ -24,11 +23,11 @@ type methodType struct {
 	ResponseDataType reflect.Type
 }
 
-var typeOfHttpRequest = reflect.TypeOf((*http.Request)(nil)).Elem()
+var typeOfContext = reflect.TypeOf((*Context)(nil)).Elem()
 var typeOfError = reflect.TypeOf((*error)(nil)).Elem()
 
 func suitableMethods(typ reflect.Type) map[string]*methodType {
-	numMethod:=typ.NumMethod()
+	numMethod := typ.NumMethod()
 	methods := make(map[string]*methodType)
 	for m := 0; m < numMethod; m++ {
 		method := typ.Method(m)
@@ -43,14 +42,12 @@ func suitableMethods(typ reflect.Type) map[string]*methodType {
 			log.Printf("rpc.Register: methods %q has %d input parameters; needs exactly 3\n", mname, mtype.NumIn())
 			continue
 		}
-		// First arg needs be a pointer to a http request
-		log.Printf("%v",mtype)
+		// First arg needs be a pointer to a context
 		requestType := mtype.In(1)
-		if requestType.Kind() != reflect.Ptr || requestType.Elem() != typeOfHttpRequest {
-			log.Printf("rpc.Register: first argument of methods %q needs to be %q not: %q\n", mname,requestType.Elem(), requestType)
+		if requestType.Kind() != reflect.Ptr || requestType.Elem() != typeOfContext {
+			log.Printf("rpc.Register: first argument of methods %q needs to be %q not: %q\n", mname, requestType.Elem(), requestType)
 			continue
 		}
-		println(fmt.Sprintf("%q"))
 		// Second arg must be a pointer.
 		dataType := mtype.In(2)
 		if dataType.Kind() != reflect.Ptr {
@@ -71,7 +68,7 @@ func suitableMethods(typ reflect.Type) map[string]*methodType {
 		if returnType := mtype.Out(0); returnType.Kind() != reflect.Ptr {
 			log.Printf("rpc.Register: return type of methods %q is %q, must be error\n", mname, returnType)
 			continue
-		}else{
+		} else {
 			// The second return type of the methods must be error.
 			if returnType := mtype.Out(1); returnType != typeOfError {
 				log.Printf("rpc.Register: return type of methods %q is %q, must be error\n", mname, returnType)
@@ -79,7 +76,6 @@ func suitableMethods(typ reflect.Type) map[string]*methodType {
 			}
 			methods[mname] = &methodType{method: method, RequestDataType: dataType, ResponseDataType: returnType}
 		}
-
 
 	}
 	return methods
