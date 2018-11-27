@@ -33,7 +33,7 @@ const debugText = `<html>
 var debug = template.Must(template.New("RPC debug").Parse(debugText))
 
 type debugMethod struct {
-	Type             *methodType
+	Type             *methodType `json:"-"`
 	Name             string
 	RequestDataType  interface{}
 	ResponseDataType interface{}
@@ -42,7 +42,7 @@ type debugMethod struct {
 type methodArray []debugMethod
 
 type debugService struct {
-	Service *service
+	Service *service `json:"-"`
 	Name    string
 	Method  methodArray
 }
