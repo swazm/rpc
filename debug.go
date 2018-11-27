@@ -22,7 +22,7 @@ const debugText = `<html>
 		<th align=center>Method</th>
 		{{range .Method}}
 			<tr>
-			<td align=left font=fixed>{{.Name}}(*http.Request, {{.Type.RequestDataType}},) ({{.Type.ResponseDataType}} error)</td>
+			<td align=left font=fixed>{{.Name}}(*http.Request, {{.Type.Request\Type}},) ({{.Type.ResponseDataType}} error)</td>
 			</tr>
 		{{end}}
 		</table>
@@ -92,7 +92,6 @@ func (server *Server) getServices() *serviceArray {
 				RequestDataType:  reflect.New(method.RequestDataType.Elem()).Interface(),
 				ResponseDataType: reflect.New(method.ResponseDataType.Elem()).Interface(),
 			}
-			log.Printf("DATA TYPE IN: %q",m)
 			ds.Method = append(ds.Method,m )
 		}
 		sort.Sort(ds.Method)
