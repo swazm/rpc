@@ -1,10 +1,13 @@
 package rpc
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"net/http"
+	"reflect"
 	"sort"
 )
 
@@ -30,8 +33,10 @@ const debugText = `<html>
 var debug = template.Must(template.New("RPC debug").Parse(debugText))
 
 type debugMethod struct {
-	Type *methodType
-	Name string
+	Type             *methodType
+	Name             string
+	RequestDataType  interface{}
+	ResponseDataType interface{}
 }
 
 type methodArray []debugMethod
@@ -53,6 +58,16 @@ func (m methodArray) Less(i, j int) bool { return m[i].Name < m[j].Name }
 func (m methodArray) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
 
 // Runs at /debug/rpc
+func (server *Server) DebugHandlerFuncJSON(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("content-type","application/json")
+	err := json.NewEncoder(w).Encode(server.getServices())
+	if err != nil {
+		log.Printf("err %s",err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+// Runs at /debug/rpc
 func (server *Server) DebugHandlerFunc(w http.ResponseWriter, req *http.Request) {
 	err := server.writeDebug(w)
 	if err != nil {
@@ -62,16 +77,27 @@ func (server *Server) DebugHandlerFunc(w http.ResponseWriter, req *http.Request)
 
 func (server *Server) writeDebug(w io.Writer) error {
 	// Build a sorted version of the data.
+
+	return debug.Execute(w, server.getServices())
+}
+func (server *Server) getServices() *serviceArray {
 	var services serviceArray
 	for snamei, svci := range server.services {
 		svc := svci
 		ds := debugService{svc, snamei, make(methodArray, 0, len(svc.methods))}
 		for mname, method := range svc.methods {
-			ds.Method = append(ds.Method, debugMethod{method, mname})
+			m:=debugMethod{
+				Type:             method,
+				Name:             mname,
+				RequestDataType:  reflect.New(method.RequestDataType.Elem()).Interface(),
+				ResponseDataType: reflect.New(method.ResponseDataType.Elem()).Interface(),
+			}
+			log.Printf("DATA TYPE IN: %q",m)
+			ds.Method = append(ds.Method,m )
 		}
 		sort.Sort(ds.Method)
 		services = append(services, ds)
 	}
 	sort.Sort(services)
-	return debug.Execute(w, services)
+	return &services
 }
