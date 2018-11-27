@@ -22,7 +22,7 @@ const debugText = `<html>
 		<th align=center>Method</th>
 		{{range .Method}}
 			<tr>
-			<td align=left font=fixed>{{.Name}}(*http.Request, {{.Type.Request\Type}},) ({{.Type.ResponseDataType}} error)</td>
+			<td align=left font=fixed>{{.Name}}(*http.Request, {{.Type.RequestType}},) ({{.Type.ResponseDataType}} error)</td>
 			</tr>
 		{{end}}
 		</table>
